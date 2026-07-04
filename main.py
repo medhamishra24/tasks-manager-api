@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from database import engine, SessionLocal, Base
 import models
+import auth
 
 Base.metadata.create_all(bind=engine)
 
@@ -51,3 +52,23 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
     db.delete(task)
     db.commit()
     return {"message": f"Task {task_id} deleted"}
+
+@app.post("/signup")
+def signup(email: str, password: str, db: Session = Depends(get_db)):
+    existing_user = db.query(models.User).filter(models.User.email == email).first()
+    if existing_user:
+        return {"error": "Email already registered"}
+    hashed_pw = auth.hash_password(password)
+    new_user = models.User(email=email, hashed_password=hashed_pw)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return {"message": "User created successfully", "user_id": new_user.id}
+
+@app.post("/login")
+def login(email: str, password: str, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if not user or not auth.verify_password(password, user.hashed_password):
+        return {"error": "Invalid email or password"}
+    token = auth.create_access_token({"sub": user.email})
+    return {"access_token": token, "token_type": "bearer"}

@@ -20,11 +20,11 @@ def home():
     return {"message": "hello, FastAPI!"}
 
 @app.get("/tasks")
-def get_tasks(db: Session = Depends(get_db)):
+def get_tasks(db: Session = Depends(get_db), current_user: str = Depends(auth.get_current_user_email)):
     return db.query(models.Task).all()
 
 @app.post("/tasks")
-def add_task(title: str, db: Session = Depends(get_db)):
+def add_task(title: str, db: Session = Depends(get_db), current_user: str = Depends(auth.get_current_user_email)):
     new_task = models.Task(title=title, done=False)
     db.add(new_task)
     db.commit()
@@ -32,7 +32,7 @@ def add_task(title: str, db: Session = Depends(get_db)):
     return new_task
 
 @app.patch("/tasks/{task_id}")
-def update_task(task_id: int, title: str = None, done: bool = None, db: Session = Depends(get_db)):
+def update_task(task_id: int, title: str = None, done: bool = None, db: Session = Depends(get_db), current_user: str = Depends(auth.get_current_user_email)):
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not task:
         return {"error": "Task not found"}
@@ -45,7 +45,7 @@ def update_task(task_id: int, title: str = None, done: bool = None, db: Session 
     return task
 
 @app.delete("/tasks/{task_id}")
-def delete_task(task_id: int, db: Session = Depends(get_db)):
+def delete_task(task_id: int, db: Session = Depends(get_db), current_user: str = Depends(auth.get_current_user_email)):
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not task:
         return {"error": "Task not found"}
